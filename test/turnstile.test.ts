@@ -1,17 +1,31 @@
-// import * as cdk from 'aws-cdk-lib';
-// import { Template } from 'aws-cdk-lib/assertions';
-// import * as Turnstile from '../lib/turnstile-stack';
+import * as cdk from 'aws-cdk-lib';
+import { Match, Template } from 'aws-cdk-lib/assertions';
+import { TurnstileStack } from '../lib/turnstile-stack';
 
-// example test. To run these tests, uncomment this file along with the
-// example resource in lib/turnstile-stack.ts
-test('SQS Queue Created', () => {
-//   const app = new cdk.App();
-//     // WHEN
-//   const stack = new Turnstile.TurnstileStack(app, 'MyTestStack');
-//     // THEN
-//   const template = Template.fromStack(stack);
+test('Stack creates core ETL resources', () => {
+  const app = new cdk.App();
+  const stack = new TurnstileStack(app, 'TurnstileTestStack');
+  const template = Template.fromStack(stack);
 
-//   template.hasResourceProperties('AWS::SQS::Queue', {
-//     VisibilityTimeout: 300
-//   });
+  template.resourceCountIs('AWS::StepFunctions::StateMachine', 1);
+  template.resourceCountIs('AWS::Lambda::Function', 1);
+  template.resourceCountIs('AWS::DynamoDB::Table', 1);
+  template.resourceCountIs('AWS::Events::Rule', 1);
+  template.resourceCountIs('AWS::SNS::Topic', 1);
+  template.resourceCountIs('AWS::CloudWatch::Alarm', 2);
+
+  template.hasResourceProperties('AWS::S3::Bucket', {
+    BucketEncryption: Match.objectLike({
+      ServerSideEncryptionConfiguration: Match.arrayWith([
+        Match.objectLike({
+          ServerSideEncryptionByDefault: Match.objectLike({
+            SSEAlgorithm: 'AES256',
+          }),
+        }),
+      ]),
+    }),
+    VersioningConfiguration: {
+      Status: 'Enabled',
+    },
+  });
 });
